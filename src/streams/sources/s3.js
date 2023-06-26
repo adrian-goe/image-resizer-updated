@@ -37,6 +37,14 @@ function s3Stream(image){
 
 util.inherits(s3Stream, stream.Readable);
 
+const streamToBuffer = (stream) => new Promise((resolve, reject) => {
+  const chunks = [];
+  stream.on('data', (chunk) => chunks.push(chunk));
+  stream.on('error', reject);
+  stream.on('end', () => resolve(Buffer.concat(chunks)));
+});
+
+
 s3Stream.prototype._read = function(){
   var _this = this;
 
@@ -59,18 +67,24 @@ s3Stream.prototype._read = function(){
 
   this.image.log.time('s3');
 
-  client.send(command).then(data => {
-    _this.image.contents = data.Body;
-    _this.image.originalContentLength = data.Body.length;
-  }).catch(err => {
-    _this.image.error = err;
-  }).finally(() => {
-    _this.image.log.timeEnd('s3');
-    _this.ended = true;
-    _this.push(_this.image);
-    _this.push(null);
+  client.send(command)
+      .then( data => streamToBuffer(data.Body))
+      .then( data => {
+        _this.image.contents = data;
+        _this.image.originalContentLength = data.Body.length;
+      })
+      .catch(err => {
+        _this.image.error = err;
+      })
+      .finally(() => {
+        _this.image.log.timeEnd('s3');
+        _this.ended = true;
+        _this.push(_this.image);
+        _this.push(null);
   });
 };
+
+
 
 
 module.exports = s3Stream;
