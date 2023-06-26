@@ -71,7 +71,7 @@ s3Stream.prototype._read = function(){
       .then( data => streamToBuffer(data.Body))
       .then( data => {
         _this.image.contents = data;
-        _this.image.originalContentLength = data.Body.length;
+        _this.image.originalContentLength = data.length;
       })
       .catch(err => {
         _this.image.error = err;
